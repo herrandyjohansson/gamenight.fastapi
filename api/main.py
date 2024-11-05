@@ -4,4 +4,4 @@ app = FastAPI()
 
 @app.get("/")
 async def health_check():
-    return "Hello": "World"
+    return "Hello World!"
