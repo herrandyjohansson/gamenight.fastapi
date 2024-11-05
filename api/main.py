@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from supabase import create_client, Client
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
 # Load environment variables from .env
 # load_dotenv()
