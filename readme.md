@@ -10,4 +10,10 @@ python3 -m venv venv
 
 source venv/bin/activate
 
-uvicorn main:app --reload
+# Run server
+
+uvicorn api.main:app --reload
+
+# Install dependencies
+
+pip install databases sqlalchemy asyncpg psycopg2-binary python-dotenv
