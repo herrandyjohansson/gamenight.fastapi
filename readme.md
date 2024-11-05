@@ -16,4 +16,8 @@ uvicorn api.main:app --reload
 
 # Install dependencies
 
-pip install databases sqlalchemy asyncpg psycopg2-binary python-dotenv
+pip install databases sqlalchemy asyncpg psycopg2-binary python-dotenv supabase
+
+# Generate requirements
+
+pip freeze > requirements.txt
