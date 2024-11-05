@@ -3,5 +3,5 @@ from fastapi import FastAPI
 app = FastAPI()
 
 @app.get("/")
-async def health_check():
-    return "Hello World!"
+async def root():
+    return {"message": "Hello, World"}
