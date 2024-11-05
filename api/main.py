@@ -8,6 +8,20 @@ load_dotenv()
 
 app = FastAPI()
 
+# Allow origins (change to your frontend URL)
+origins = [
+    "https://gamenight-fastapi.vercel.app",
+    "http://localhost:5173"  # Allow localhost for local development
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
