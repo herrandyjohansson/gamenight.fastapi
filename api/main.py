@@ -14,7 +14,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.get("/")
 async def read_root():
-    return {"message": "Hello, World!"}
+    return {"message": "Hello, World!!"}
 
 # Endpoint to fetch all data from the Gamers table
 @app.get("/gamers/")
