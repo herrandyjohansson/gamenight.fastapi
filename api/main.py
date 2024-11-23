@@ -178,7 +178,7 @@ def get_email_list():
         raise HTTPException(status_code=500, detail=str(error))
 
 # Make send_email function synchronous
-def send_email(recipient: str):
+def send_email():
     try:
         # Create the email
         msg = MIMEMultipart()
@@ -214,16 +214,15 @@ def send_email(recipient: str):
 
         print(f"Email successfully all mails")
     except Exception as error:
-        print(f"Failed to send email to {recipient}: {str(error)}")
+        print(f"Failed to send email mails. {str(error)}")
 
 # Initialize the APScheduler scheduler
-# scheduler = BackgroundScheduler()
-# scheduler.start()
+scheduler = BackgroundScheduler()
+scheduler.start()
 
-# scheduler.add_job(
-#     send_email,
-#     trigger=CronTrigger(minute="*/1"),  # Every 1 minutes
-#     id="five_min_email_job",  # Unique ID for the job
-#     replace_existing=True,  # Replace the existing job if one with the same ID exists
-#     args=["loekandy@gmail.com"]  # Arguments for the send_email function
-# )
+scheduler.add_job(
+    send_email,
+    trigger=CronTrigger(day_of_week="sun", hour=8, minute=0),  # Every Sunday at 8:00 AM
+    id="weekly_email_job",  # Unique ID for the job
+    replace_existing=True  # Replace the existing job if one with the same ID exists
+)
