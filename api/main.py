@@ -2,8 +2,13 @@ from fastapi import FastAPI, HTTPException
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from datetime import date, datetime, timedelta
+from pydantic import BaseModel, EmailStr
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 # Load environment variables from .env
 load_dotenv()
@@ -121,3 +126,104 @@ async def all_gamers_agreed():
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
+# Load Gmail credentials from environment variables
+GMAIL_USER = "herrandyjohansson@gmail.com"
+GMAIL_PASSWORD = "evlrxazgqxwnmemb"
+
+if not GMAIL_USER or not GMAIL_PASSWORD:
+    raise RuntimeError("Gmail credentials must be set in environment variables.")
+
+# Pydantic model for email request
+class EmailRequest(BaseModel):
+    recipient: EmailStr
+    subject: str
+    message: str
+
+
+def email_service_active():
+    try:
+        response = supabase_client.table("services").select("active").eq("name", "email").execute()
+
+        return response.data[0].get("active") is True
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+    
+    
+def email_subject():
+    try:
+        response = supabase_client.table("email").select("subject").execute()
+        return response.data[0].get("subject")
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+    
+def email_message():
+    try:
+        response = supabase_client.table("email").select("message").execute()
+        return response.data[0].get("message")
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+def get_email_list():
+    try:
+        # Fetch data from the "gamers" table selecting only the "email" field
+        response = supabase_client.table("gamers").select("email").execute()
+
+        # Extract emails and filter out None (null) values
+        email_list = [record['email'] for record in response.data if record['email'] is not None]
+
+        # Return the list of non-null emails
+        return email_list
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+# Make send_email function synchronous
+def send_email(recipient: str):
+    try:
+        # Create the email
+        msg = MIMEMultipart()
+        msg['From'] = GMAIL_USER
+        msg['To'] = recipient
+        msg['Subject'] = email_subject()
+
+        # Attach the email body
+        msg.attach(MIMEText(email_message(), 'plain'))
+
+        # Connect to Gmail's SMTP server
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Upgrade the connection to secure
+
+        # Log in to the Gmail account
+        server.login(GMAIL_USER, GMAIL_PASSWORD)
+
+        should_send_email = email_service_active()
+
+        if not should_send_email:
+            print("Email service is not activated.")
+            return
+        
+        send_emails_to_recipients_list = get_email_list()
+
+        # loop through the list of emails and send the email
+        for gamer in send_emails_to_recipients_list:
+            server.sendmail(GMAIL_USER, gamer, msg.as_string())
+            print(f"Email successfully sent to {gamer}")
+        
+        # Disconnect from the server
+        server.quit()
+
+        print(f"Email successfully all mails")
+    except Exception as error:
+        print(f"Failed to send email to {recipient}: {str(error)}")
+
+# Initialize the APScheduler scheduler
+# scheduler = BackgroundScheduler()
+# scheduler.start()
+
+# scheduler.add_job(
+#     send_email,
+#     trigger=CronTrigger(minute="*/1"),  # Every 1 minutes
+#     id="five_min_email_job",  # Unique ID for the job
+#     replace_existing=True,  # Replace the existing job if one with the same ID exists
+#     args=["loekandy@gmail.com"]  # Arguments for the send_email function
+# )
