@@ -21,3 +21,15 @@ pip freeze > requirements.txt
 # Run server
 
 uvicorn api.main:app --reload
+
+# windows
+
+install python
+
+python -m venv venv
+
+venv\Scripts\activate
+
+pip install databases sqlalchemy asyncpg psycopg2-binary python-dotenv supabase
+
+uvicorn api.main:app --reload
