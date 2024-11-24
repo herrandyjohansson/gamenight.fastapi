@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, HTTPException
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -19,7 +20,8 @@ app = FastAPI()
 origins = [
     "https://gamenight-fastapi.vercel.app",
     "https://andyland-gamenight.vercel.app"
-    "http://localhost:5173" 
+    "http://localhost:5173",
+    "http://localhost:3000",  # Next.js server
 ]
 
 app.add_middleware(
@@ -50,7 +52,7 @@ class Vote(BaseModel):
         }
 
 class Votes(BaseModel):
-    votes: list[Vote]
+    votes: List[Vote]
 
 @app.get("/")
 async def read_root():
@@ -69,17 +71,40 @@ async def get_all_gamers():
 @app.post("/gamers/vote/")
 async def vote_for_dates(votes: Votes):
     try:
-        # Remove all previous votes for current gamer 
-        gamer_ids = [vote.gamer_id for vote in votes.votes]
-        response = supabase_client.table("votes_session").delete().in_("gamer_id", gamer_ids).execute()
+        for vote in votes.votes:
+            # Convert vote_date to a string if it is a date object
+            if isinstance(vote.vote_date, date):
+                vote.vote_date = vote.vote_date.strftime("%Y-%m-%d")
 
-        # Cast votes
-        vote_data = [vote.to_dict() for vote in votes.votes]
-        response = supabase_client.table("votes_session").insert(vote_data).execute()
+            # Check if the vote already exists
+            existing_vote_response = supabase_client.table("votes_session").select("*")\
+                .eq("gamer_id", vote.gamer_id).eq("vote_date", vote.vote_date).execute()
 
-        return response.data
+            # Debug the response to understand its structure
+            print("Existing Vote Response:", existing_vote_response)
+
+            # If the response has data, we proceed to check the data content
+            if hasattr(existing_vote_response, 'data') and existing_vote_response.data:
+                # If the vote already exists, delete it
+                delete_response = supabase_client.table("votes_session").delete()\
+                    .eq("gamer_id", vote.gamer_id).eq("vote_date", vote.vote_date).execute()
+
+                # Check if the delete response has an error
+                if hasattr(delete_response, 'error') and delete_response.error:
+                    raise HTTPException(status_code=500, detail=f"Error deleting vote: {delete_response.error.message}")
+
+            else:
+                # If the vote does not exist, insert it
+                insert_response = supabase_client.table("votes_session").insert(vote.dict()).execute()
+
+                # Check if the insert response has an error
+                if hasattr(insert_response, 'error') and insert_response.error:
+                    raise HTTPException(status_code=500, detail=f"Error inserting vote: {insert_response.error.message}")
+
+        return {"message": "Votes processed successfully."}
+
     except Exception as error:
-        raise HTTPException(status_code=500, detail=f"Error casting votes: {str(error)}")
+        raise HTTPException(status_code=500, detail=f"Error processing votes: {str(error)}")
 
 
 # Endpoint to get all votes for the current week
@@ -214,7 +239,7 @@ def send_email():
 
         print(f"Email successfully all mails")
     except Exception as error:
-        print(f"Failed to send email mails. {str(error)}")
+        print(f"Failed to send email mails.  {str(error)}")
 
 # Initialize the APScheduler scheduler
 scheduler = BackgroundScheduler()
