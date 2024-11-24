@@ -19,9 +19,9 @@ app = FastAPI()
 # Allow origins (change to your frontend URL)
 origins = [
     "https://gamenight-fastapi.vercel.app",
-    "https://andyland-gamenight.vercel.app"
     "http://localhost:5173",
     "http://localhost:3000",  # Next.js server
+    "https://gamenight-v3.vercel.app"
 ]
 
 app.add_middleware(
