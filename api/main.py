@@ -208,7 +208,6 @@ def send_email():
         # Create the email
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
-        msg['To'] = recipient
         msg['Subject'] = email_subject()
 
         # Attach the email body
