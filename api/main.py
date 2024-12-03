@@ -41,19 +41,16 @@ class Gamer(BaseModel):
     name: str
     email: str
 
-class Vote(BaseModel):
+class SingleVote(BaseModel):
     gamer_id: int
     vote_date: date
-    vote: bool
 
-    def to_dict(self):
+    def to_serializable_dict(self):
         return {
             "gamer_id": self.gamer_id,
-            "vote_date": self.vote_date.isoformat()  # Convert date to ISO format string
+            "vote_date": self.vote_date.isoformat(),  # Convert date to string
+            "vote": self.vote,
         }
-
-class Votes(BaseModel):
-    votes: List[Vote]
 
 @app.get("/")
 async def read_root():
@@ -70,36 +67,51 @@ async def get_all_gamers():
 
 # Endpoint to make gamer vote for multiple game dates
 @app.post("/gamers/vote/")
-async def vote_for_dates(votes: Votes):
+async def toggle_vote(single_vote: SingleVote):
     try:
-        # Get the current week's start and end date
-        today = datetime.now().date()
-        start_of_week = today - timedelta(days=today.weekday())  # Monday
-        end_of_week = start_of_week + timedelta(days=6)  # Sunday
+        # Check if a vote exists for the gamer and date
+        existing_vote_response = (
+            supabase_client.table("votes_session")
+            .select("*")
+            .eq("gamer_id", single_vote.gamer_id)
+            .eq("vote_date", single_vote.vote_date)
+            .execute()
+        )
+        existing_votes = existing_vote_response.data
 
-        # Query the votes within the current week
-        existing_votes_current_week = supabase_client.table("votes_session").select("*")\
-            .gte("vote_date", start_of_week).lte("vote_date", end_of_week).execute()
-        
-        # Remove all existing votes within the current week
-        if existing_votes_current_week.data:
-            for vote in existing_votes_current_week.data:
-                delete_response = supabase_client.table("votes_session").delete().eq("id", vote["id"]).execute()
-                if hasattr(delete_response, 'error') and delete_response.error:
-                    raise HTTPException(status_code=500, detail=str(delete_response.error.message))
-                
-        # Add the new votes based on if vote is True
-        for vote in votes.votes:
-            if vote.vote:
-                insert_response = supabase_client.table("votes_session").insert(vote.to_dict()).execute()
-                if hasattr(insert_response, 'error') and insert_response.error:
-                    raise HTTPException(status_code=500, detail=str(insert_response.error.message))
-        
-        # Return number of votes updated to database
-        return {"message": f"Votes processed successfully."}
+        if existing_votes:
+            # If a vote exists, delete it
+            delete_response = (
+                supabase_client.table("votes_session")
+                .delete()
+                .eq("id", existing_votes[0]["id"])
+                .execute()
+            )
+            if hasattr(delete_response, "error") and delete_response.error:
+                raise HTTPException(
+                    status_code=500, detail=str(delete_response.error.message)
+                )
+        else:
+            # If no vote exists, insert it
+            insert_response = (
+                supabase_client.table("votes_session")
+                .insert(
+                    {
+                        "gamer_id": single_vote.gamer_id,
+                        "vote_date": single_vote.vote_date.isoformat(),
+                    }
+                )
+                .execute()
+            )
+            if hasattr(insert_response, "error") and insert_response.error:
+                raise HTTPException(
+                    status_code=500, detail=str(insert_response.error.message)
+                )
+
+        return {"message": "Vote toggled successfully."}
+
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
-
 
 # Endpoint to get all votes for the current week
 @app.get("/gamers/votes/results")
