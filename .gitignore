@@ -1,4 +1,55 @@
-.env
+# Python bytecode files
+*.py[cod]
 __pycache__/
+*.pyo
+*.pyd
 *.pyc
+
+# Virtual environment folders
+env/
+venv/
+
+# FastAPI-specific
+*.log
+*.pid
+*.seed
+*.cover
+instance/
+instance/*
+
+# Environment variables
+.env
+.env.*
+
+# IDE-specific files
+.idea/
+.vscode/
+*.swp
+
+# Test and build artifacts
+.coverage
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.egg-info/
+dist/
+build/
+*.egg
+*.manifest
+
+# Database files
+*.sqlite3
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Compiled files
+*.so
+*.dll
+*.dylib
+
+# Custom entry based on user input
 api/__pycache__/main.cpython-313.pyc
