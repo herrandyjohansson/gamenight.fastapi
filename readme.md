@@ -32,4 +32,12 @@ venv\Scripts\activate
 
 pip install databases sqlalchemy asyncpg psycopg2-binary python-dotenv supabase
 
+# email
+
+pip install pydantic[email]
+
 uvicorn api.main:app --reload
+
+# cron
+
+cron jobs.org

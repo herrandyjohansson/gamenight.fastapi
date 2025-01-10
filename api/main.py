@@ -8,8 +8,6 @@ from pydantic import BaseModel, EmailStr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 # Load environment variables from .env
 load_dotenv()
@@ -151,20 +149,32 @@ async def all_gamers_agreed():
         unanimous_agreed_date = next((v_date for v_date, count in vote_counts.items() if count == total_gamers), None)
 
         if unanimous_agreed_date:
+            send_confirmation_email()
             return {"agreed": True, "agreed_date": unanimous_agreed_date}
         else:
             return {"agreed": False, "message": "Gamers have not unanimously agreed on a date."}
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
+
 @app.get("/test/sendemail")
 async def test_send_email():
     try:
-        send_email()
-        return {"message": "Email sent successfully."}
+        response = send_confirmation_email()
+        return {"message": str(response)}
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
+
+@app.get("/weekly/reminder")
+async def test_send_email():
+    try:
+        send_weekly_reminder_email()
+        # Activate email service
+        email_service_toggle(True)
+        return {"message": "Weekly reminder email sent."}
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
 
 # Load Gmail credentials from environment variables
 GMAIL_USER = "herrandyjohansson@gmail.com"
@@ -179,6 +189,12 @@ class EmailRequest(BaseModel):
     subject: str
     message: str
 
+def email_service_toggle(status: bool): 
+    try:
+        supabase_client.table("services").update({"active": status}).eq("name", "email").execute()
+        return {"message": "Email service set to: " + str(status)}
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
 
 def email_service_active():
     try:
@@ -217,8 +233,51 @@ def get_email_list():
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
+def send_confirmation_email(): 
+    try:
+        # Create the email
+        msg = MIMEMultipart()
+        msg['From'] = GMAIL_USER
+        msg['Subject'] = "Game Night Confirmation"
+
+        email_message = "locked and loaded"
+        # Attach the email body
+        msg.attach(MIMEText(email_message, 'plain'))
+
+        # Connect to Gmail's SMTP server
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Upgrade the connection to secure
+
+        # Log in to the Gmail account
+        server.login(GMAIL_USER, GMAIL_PASSWORD)
+
+        should_send_email = email_service_active()
+
+        if not should_send_email:
+            print("Email service is not activated.")
+            return "Email service is not activated."
+        
+        send_emails_to_recipients_list = get_email_list()
+
+        # loop through the list of emails and send the email
+        for gamer in send_emails_to_recipients_list:
+            server.sendmail(GMAIL_USER, gamer, msg.as_string())
+            print(f"Email successfully sent to {gamer}")
+        
+        # inactive email service
+        email_service_toggle(False)
+
+        # Disconnect from the server
+        server.quit()
+
+        print(f"Email successfully all mails")
+        return "Email successfully all mails"
+    except Exception as error:
+        print(f"Failed to send email mails.  {str(error)}")
+        return f"Failed to send email mails.  {str(error)}"
+        
 # Make send_email function synchronous
-def send_email():
+def send_weekly_reminder_email():
     try:
         # Create the email
         msg = MIMEMultipart()
@@ -234,12 +293,6 @@ def send_email():
 
         # Log in to the Gmail account
         server.login(GMAIL_USER, GMAIL_PASSWORD)
-
-        should_send_email = email_service_active()
-
-        if not should_send_email:
-            print("Email service is not activated.")
-            return
         
         send_emails_to_recipients_list = get_email_list()
 
@@ -255,13 +308,3 @@ def send_email():
     except Exception as error:
         print(f"Failed to send email mails.  {str(error)}")
 
-# Initialize the APScheduler scheduler
-scheduler = BackgroundScheduler()
-scheduler.start()
-
-scheduler.add_job(
-    send_email,
-    trigger=CronTrigger(day_of_week="fri", hour=14, minute=0),  # Every Sunday at 8:00 AM
-    id="weekly_email_job",  # Unique ID for the job
-    replace_existing=True  # Replace the existing job if one with the same ID exists
-)
