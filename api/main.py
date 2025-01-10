@@ -157,6 +157,15 @@ async def all_gamers_agreed():
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
+@app.get("/test/sendemail")
+async def test_send_email():
+    try:
+        send_email()
+        return {"message": "Email sent successfully."}
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+
 # Load Gmail credentials from environment variables
 GMAIL_USER = "herrandyjohansson@gmail.com"
 GMAIL_PASSWORD = "evlrxazgqxwnmemb"
@@ -252,7 +261,7 @@ scheduler.start()
 
 scheduler.add_job(
     send_email,
-    trigger=CronTrigger(day_of_week="sun", hour=8, minute=0),  # Every Sunday at 8:00 AM
+    trigger=CronTrigger(day_of_week="fri", hour=14, minute=0),  # Every Sunday at 8:00 AM
     id="weekly_email_job",  # Unique ID for the job
     replace_existing=True  # Replace the existing job if one with the same ID exists
 )
