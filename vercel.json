@@ -1,21 +1,21 @@
 {
   "version": 2,
-  "functions": {
-    "api/scheduled-task.py": {
-      "runtime": "vercel-python",
-      "schedule": "*/5 * * * *"
-    }
-  },
   "builds": [
     {
-      "src": "api/main.py",
+      "src": "api/scheduled-task.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "api/main.py"
+      "src": "/.*",
+      "dest": "api/scheduled-task.py"
+    }
+  ],
+  "cron": [
+    {
+      "path": "/api/scheduled-task",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
