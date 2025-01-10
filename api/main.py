@@ -8,6 +8,7 @@ from pydantic import BaseModel, EmailStr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
+from datetime import date
 
 # Load environment variables from .env
 load_dotenv()
@@ -149,7 +150,7 @@ async def all_gamers_agreed():
         unanimous_agreed_date = next((v_date for v_date, count in vote_counts.items() if count == total_gamers), None)
 
         if unanimous_agreed_date:
-            send_confirmation_email()
+            send_confirmation_email(unanimous_agreed_date)
             return {"agreed": True, "agreed_date": unanimous_agreed_date}
         else:
             return {"agreed": False, "message": "Gamers have not unanimously agreed on a date."}
@@ -160,7 +161,7 @@ async def all_gamers_agreed():
 @app.get("/test/sendemail")
 async def test_send_email():
     try:
-        response = send_confirmation_email()
+        response = send_confirmation_email("2021-09-30")
         return {"message": str(response)}
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
@@ -233,14 +234,17 @@ def get_email_list():
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
-def send_confirmation_email(): 
+def send_confirmation_email(date: date): 
     try:
-        # Create the email
+        parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
+        formatted_date = parsed_date.strftime("%Y-%m-%d")  
+        day_of_week = parsed_date.strftime("%A")  
+
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
-        msg['Subject'] = "Game Night Confirmation"
+        msg['Subject'] = f"GameNight locked - {day_of_week}, {formatted_date}"
 
-        email_message = "locked and loaded"
+        email_message = f"The GameNight has been locked for the week!\n\nDay: {day_of_week} \n\nDate: {formatted_date}"
         # Attach the email body
         msg.attach(MIMEText(email_message, 'plain'))
 
