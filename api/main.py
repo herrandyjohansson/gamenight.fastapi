@@ -118,7 +118,7 @@ async def all_gamers_agreed():
     try:
         # Get the current week's start and end date
         today = datetime.now().date()
-        start_of_week = today - timedelta(days=today.weekday())  # Monday
+        start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)  # Sunday
         end_of_week = start_of_week + timedelta(days=6)  # Sunday
 
         # Get the total number of gamers
